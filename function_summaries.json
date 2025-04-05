@@ -1,0 +1,11 @@
+{
+  "shutdownApp": "This function ensures the application is gracefully terminated, releasing resources and stopping background processes. It effectively initiates the shutdown sequence to prevent resource leaks and ensure a clean exit.",
+  "main": "This C++ function performs basic operations involving integer calculations, string manipulation, and command processing, culminating in the shutdown of the application.",
+  "add": "This function `add` takes two integer inputs and returns their sum.",
+  "subtract": "This function calculates the difference between two integers, returning the result of subtracting the second integer from the first.",
+  "multiply": "This function takes two integer arguments and returns their product.",
+  "concat": "This function takes two strings as input and returns a new string that is the concatenation of the two input strings.",
+  "toUpper": "This function takes a string and converts it to all uppercase characters using the `::toupper` function.",
+  "initializeApp": "This function initializes the application by loading a configuration path from a string and returning true to indicate successful initialization. It loads the specified configuration and sets up the application's initial state.",
+  "processCommand": "This function takes a string representing a command and prints it to the console for verification. It then returns the command as a string."
+}

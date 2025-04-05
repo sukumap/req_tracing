@@ -1,0 +1,46 @@
+# Requirement Tracer - Pytest Commands Reference
+
+## Basic Commands
+
+# Run all tests
+python -m pytest
+
+# Run with verbose output
+python -m pytest -v
+
+# Run specific test files
+python -m pytest tests/test_basic.py
+
+# Run specific test functions
+python -m pytest tests/test_requirement_tracer.py::test_excel_processor_can_read_requirements
+
+# Run tests from a specific class
+python -m pytest tests/test_requirement_tracer.py::TestMappingEngine
+
+# Run a specific test method in a class
+python -m pytest tests/test_requirement_tracer.py::TestMappingEngine::test_basic_functionality
+
+## Code Coverage
+
+# Run with basic code coverage report
+python -m pytest --cov=src
+
+# Generate an HTML coverage report
+python -m pytest --cov=src --cov-report=html
+
+## Additional Options
+
+# Run tests and stop on first failure
+python -m pytest -x
+
+# Run tests with output captured (no print statements)
+python -m pytest -q
+
+# Run tests matching a specific pattern
+python -m pytest -k "basic"
+
+# List available tests without running them
+python -m pytest --collect-only
+
+# Run tests and show local variables on failure
+python -m pytest --showlocals
