@@ -62,3 +62,24 @@ cache/
 # Excel temporary files
 ~$*.xlsx
 ~$*.xls
+
+# SSH and credential files
+*.pem
+*ssh*
+*key*
+
+# Backup files
+backup_scripts/
+*_backup.*
+*_extract.txt
+
+# Model weights and large binary files
+rl_weights*/
+*.safetensors
+
+# Results directories (uncomment if you don't want to version these)
+# *_comparison*/
+# *_results*/
+
+# Explicitly ensure logs are ignored (already covered by *.log but being explicit)
+logs/

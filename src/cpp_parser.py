@@ -397,7 +397,8 @@ class CppParser:
                                              Defaults to ['.cpp', '.cc', '.cxx', '.h', '.hpp', '.hxx']
                                              
         Returns:
-            List[CppFunction]: List of all functions found in the directory
+            List[CppFunction]: List of all functions found in the directory with
+            implementations prioritized over declarations
         """
         if extensions is None:
             extensions = ['.cpp', '.cc', '.cxx', '.h', '.hpp', '.hxx']
@@ -406,13 +407,44 @@ class CppParser:
             logger.error(f"Directory not found: {directory}")
             return []
         
-        functions = []
+        # Divide extensions into implementation and header files
+        impl_extensions = ['.cpp', '.cc', '.cxx']
+        header_extensions = ['.h', '.hpp', '.hxx']
+        
+        # First collect all functions
+        all_functions = []
         
         for root, _, files in os.walk(directory):
             for file in files:
                 if any(file.endswith(ext) for ext in extensions):
                     file_path = os.path.join(root, file)
-                    functions.extend(self.parse_file(file_path))
+                    all_functions.extend(self.parse_file(file_path))
         
-        logger.info(f"Total of {len(functions)} functions extracted from directory {directory}")
-        return functions
+        # Group functions by qualified name
+        function_map = {}
+        for func in all_functions:
+            # Determine if this is an implementation or declaration
+            is_implementation = any(func.file_path.endswith(ext) for ext in impl_extensions)
+            
+            if func.qualified_name in function_map:
+                existing_func = function_map[func.qualified_name]
+                existing_is_impl = any(existing_func.file_path.endswith(ext) for ext in impl_extensions)
+                
+                # Replace only if current is implementation and existing is header
+                if is_implementation and not existing_is_impl:
+                    function_map[func.qualified_name] = func
+                    logger.debug(f"Prioritizing implementation of {func.qualified_name} from {func.file_path} over declaration")
+            else:
+                function_map[func.qualified_name] = func
+        
+        # Get the prioritized functions
+        prioritized_functions = list(function_map.values())
+        
+        # Count implementations vs declarations for logging
+        impl_count = sum(1 for f in prioritized_functions if any(f.file_path.endswith(ext) for ext in impl_extensions))
+        header_count = len(prioritized_functions) - impl_count
+        
+        logger.info(f"Total of {len(all_functions)} functions found in {directory}")
+        logger.info(f"After prioritization: {impl_count} implementations, {header_count} declarations")
+        
+        return prioritized_functions

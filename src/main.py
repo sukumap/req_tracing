@@ -9,12 +9,24 @@ import logging
 import pandas as pd
 from typing import List, Dict, Tuple
 
-from src.utils.logger import get_logger
-from src.excel_processor import ExcelProcessor
-from src.cpp_parser import CppParser, CppFunction
-from src.llm_summarizer import LLMSummarizer
-from src.mapping_engine import MappingEngine
-from src.report_generator import ReportGenerator
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) 
+
+# Now import relative to the src directory
+from utils.logger import get_logger
+from excel_processor import ExcelProcessor
+from cpp_parser import CppParser, CppFunction
+from llm_summarizer import LLMSummarizer
+from mapping_engine import MappingEngine
+from report_generator import ReportGenerator
+
+# Import our custom TinyLlama extensions if available
+try:
+    from tinyllama_summarizer import TinyLlamaSummarizer
+    from tinyllama_mapper import TinyLlamaMapper
+    TINYLLAMA_AVAILABLE = True
+except ImportError:
+    TINYLLAMA_AVAILABLE = False
 
 def parse_arguments():
     """Parse command line arguments."""
@@ -58,6 +70,19 @@ def parse_arguments():
         help="Ollama model name (default: gemma3:1b)"
     )
     
+    # Options for using trained TinyLlama model with LoRA weights
+    parser.add_argument(
+        "--use-tinyllama",
+        action="store_true",
+        help="Use trained TinyLlama model with LoRA weights instead of Ollama model"
+    )
+    
+    parser.add_argument(
+        "--tinyllama-path",
+        default=None,
+        help="Path to trained TinyLlama model weights (default: use latest epoch from rl_weights)"
+    )
+    
     parser.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
@@ -70,6 +95,13 @@ def parse_arguments():
         type=int,
         default=30,
         help="Maximum functions to list directly before creating a separate tab (default: 30)"
+    )
+    
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        default=True,  # Disabled by default to ensure debug output is visible
+        help="Disable caching for LLM summarizations (default: True)"
     )
     
     # Replace the simple --no-llm-confidence flag with a more flexible mapping method selection
@@ -113,6 +145,20 @@ def main():
         os.makedirs(output_dir)
     
     try:
+        # Print model selection info
+        if args.use_tinyllama:
+            if TINYLLAMA_AVAILABLE:
+                logger.info("Using trained TinyLlama model with LoRA weights")
+                if args.tinyllama_path:
+                    logger.info(f"TinyLlama model path: {args.tinyllama_path}")
+                else:
+                    logger.info("Using latest TinyLlama epoch from rl_weights directory")
+            else:
+                logger.warning("TinyLlama extensions not available, falling back to Ollama model")
+                logger.info(f"Using Ollama model: {args.model}")
+        else:
+            logger.info(f"Using Ollama model: {args.model}")
+        
         # 1. Read requirements from Excel
         logger.info("Reading requirements from Excel...")
         excel_processor = ExcelProcessor()
@@ -124,15 +170,27 @@ def main():
         functions = cpp_parser.parse_directory(args.codebase)
         logger.info(f"Extracted {len(functions)} functions from the codebase")
         
-        # 3. Generate function summaries using Gemma 3:1b via Ollama
-        logger.info("Generating function summaries using Gemma 3:1b...")
-        llm_summarizer = LLMSummarizer(model=args.model)
+        # 3. Generate function summaries using selected model
+        if args.use_tinyllama and TINYLLAMA_AVAILABLE:
+            logger.info("Generating function summaries using trained TinyLlama model with LoRA weights...")
+            logger.info(f"Cache {'disabled' if args.no_cache else 'enabled'} for function summarization")
+            llm_summarizer = TinyLlamaSummarizer(model_path=args.tinyllama_path, use_cache=not args.no_cache)
+        else:
+            model_name = "Gemma 3:1b" if "gemma" in args.model.lower() else args.model
+            logger.info(f"Generating function summaries using {model_name} via Ollama...")
+            logger.info(f"Cache {'disabled' if args.no_cache else 'enabled'} for function summarization")
+            llm_summarizer = LLMSummarizer(model=args.model, use_cache=not args.no_cache)
+        
         function_summaries = llm_summarizer.summarize_functions(functions)
         logger.info(f"Generated {len(function_summaries)} function summaries")
         
         # 4. Map requirements to functions
         logger.info("Mapping requirements to functions...")
-        mapping_engine = MappingEngine(similarity_threshold=args.threshold, model=args.model)
+        if args.use_tinyllama and TINYLLAMA_AVAILABLE:
+            logger.info("Using trained TinyLlama model for requirement mapping...")
+            mapping_engine = TinyLlamaMapper(similarity_threshold=args.threshold, model_path=args.tinyllama_path)
+        else:
+            mapping_engine = MappingEngine(similarity_threshold=args.threshold, model=args.model)
         
         # Prepare requirements list
         requirements_list = []

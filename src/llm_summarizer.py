@@ -21,7 +21,7 @@ class LLMSummarizer:
     3. Ensuring the model is available in Ollama
     """
     
-    def __init__(self, model="gemma3:1b", cache_file="function_summaries.json", use_fallback=False):
+    def __init__(self, model="gemma3:1b", cache_file="function_summaries.json", use_fallback=False, use_cache=True):
         """
         Initialize the LLM summarizer.
         
@@ -29,11 +29,16 @@ class LLMSummarizer:
             model (str): Name of the model to use with Ollama
             cache_file (str): Path to the cache file for function summaries
             use_fallback (bool): Force using fallback mode without LLM
+            use_cache (bool): Whether to use the cache for function summaries
         """
         self.model = model
         self.cache_file = cache_file
         self.cache = {}
         self.use_fallback = use_fallback
+        self.use_cache = use_cache
+        
+        if not self.use_cache:
+            logger.info("Cache disabled for function summarization - all functions will be summarized using LLM")
         
         # Load cache if exists
         self._load_cache()
