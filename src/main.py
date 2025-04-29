@@ -20,13 +20,20 @@ from llm_summarizer import LLMSummarizer
 from mapping_engine import MappingEngine
 from report_generator import ReportGenerator
 
-# Import our custom TinyLlama extensions if available
+# Import our custom model extensions if available
 try:
     from tinyllama_summarizer import TinyLlamaSummarizer
     from tinyllama_mapper import TinyLlamaMapper
     TINYLLAMA_AVAILABLE = True
 except ImportError:
     TINYLLAMA_AVAILABLE = False
+
+# Import our custom Gemma fine-tuned extensions if available
+try:
+    from gemma_finetuned_mapper import GemmaFineTunedMapper
+    GEMMA_FINETUNED_AVAILABLE = True
+except ImportError:
+    GEMMA_FINETUNED_AVAILABLE = False
 
 def parse_arguments():
     """Parse command line arguments."""
@@ -81,6 +88,19 @@ def parse_arguments():
         "--tinyllama-path",
         default=None,
         help="Path to trained TinyLlama model weights (default: use latest epoch from rl_weights)"
+    )
+    
+    # Options for using fine-tuned Gemma model with LoRA weights
+    parser.add_argument(
+        "--use-gemma-finetuned",
+        action="store_true",
+        help="Use fine-tuned Gemma model with LoRA weights instead of Ollama model"
+    )
+    
+    parser.add_argument(
+        "--gemma-path",
+        default=None,
+        help="Path to fine-tuned Gemma model weights (default: use latest epoch from models/gemma_lora_weights)"
     )
     
     parser.add_argument(
@@ -146,7 +166,17 @@ def main():
     
     try:
         # Print model selection info
-        if args.use_tinyllama:
+        if args.use_gemma_finetuned:
+            if GEMMA_FINETUNED_AVAILABLE:
+                logger.info("Using fine-tuned Gemma model with LoRA weights")
+                if args.gemma_path:
+                    logger.info(f"Fine-tuned Gemma model path: {args.gemma_path}")
+                else:
+                    logger.info("Using latest fine-tuned Gemma epoch from models/gemma_lora_weights directory")
+            else:
+                logger.warning("Fine-tuned Gemma extensions not available, falling back to Ollama model")
+                logger.info(f"Using Ollama model: {args.model}")
+        elif args.use_tinyllama:
             if TINYLLAMA_AVAILABLE:
                 logger.info("Using trained TinyLlama model with LoRA weights")
                 if args.tinyllama_path:
@@ -186,7 +216,10 @@ def main():
         
         # 4. Map requirements to functions
         logger.info("Mapping requirements to functions...")
-        if args.use_tinyllama and TINYLLAMA_AVAILABLE:
+        if args.use_gemma_finetuned and GEMMA_FINETUNED_AVAILABLE:
+            logger.info("Using fine-tuned Gemma model for requirement mapping...")
+            mapping_engine = GemmaFineTunedMapper(similarity_threshold=args.threshold, model_path=args.gemma_path)
+        elif args.use_tinyllama and TINYLLAMA_AVAILABLE:
             logger.info("Using trained TinyLlama model for requirement mapping...")
             mapping_engine = TinyLlamaMapper(similarity_threshold=args.threshold, model_path=args.tinyllama_path)
         else:

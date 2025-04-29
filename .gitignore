@@ -83,3 +83,34 @@ rl_weights*/
 
 # Explicitly ensure logs are ignored (already covered by *.log but being explicit)
 logs/
+# Large model files
+models/gemma_lora_weights/*/adapter_model.safetensors
+models/gemma_lora_weights/*/model.safetensors
+models/gemma_lora_weights/*/pytorch_model.bin
+
+# Generated/temporary files
+gemma_fine_tuning_presentation.pptx
+filter_high_confidence.py
+examine_excel.py
+create_presentation.py
+
+# Output data
+tests/data/output_*.xlsx
+
+# Sensitive information
+Lambda-ssh.pem
+*.pem
+*credentials*
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Logs
+*.log
+training_logs/
+inference_logs/
